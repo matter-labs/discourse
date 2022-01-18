@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-require 'stylesheet/importer'
-require 'stylesheet/functions'
-
 module Stylesheet
 
   class Compiler

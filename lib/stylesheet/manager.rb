@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-require_dependency 'distributed_cache'
-require_dependency 'stylesheet/compiler'
-
 module Stylesheet; end
 
 class Stylesheet::Manager

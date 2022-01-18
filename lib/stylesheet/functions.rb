@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Stylesheet
-  module ScssFunctions
+  module Functions
     def asset_url(path)
       Discourse.deprecate("The `asset-url` SCSS function is deprecated. Use `absolute-image-url` instead.", drop_from: '2.9.0')
       SassC::Script::Value::String.new("url('#{ActionController::Base.helpers.asset_url(path.value)}')")
@@ -13,4 +13,4 @@ module Stylesheet
   end
 end
 
-::SassC::Script::Functions.include(Stylesheet::ScssFunctions)
+::SassC::Script::Functions.include(Stylesheet::Functions)

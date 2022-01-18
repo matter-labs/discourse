@@ -53,10 +53,6 @@ end
 
 require 'pry-rails' if Rails.env.development?
 
-require 'discourse_fonts'
-
-require_relative '../lib/zeitwerk_config.rb'
-
 if defined?(Bundler)
   bundler_groups = [:default]
 
@@ -83,14 +79,11 @@ module Discourse
     # Application configuration should go into files in config/initializers
     # -- all .rb files in that directory are automatically loaded.
 
-    # this pattern is somewhat odd but the reloader gets very
-    # confused here if we load the deps without `lib` it thinks
-    # discourse.rb is under the discourse folder incorrectly
-    require_dependency 'lib/discourse'
-    require_dependency 'lib/js_locale_helper'
+    require 'discourse'
+    require 'js_locale_helper'
 
     # tiny file needed by site settings
-    require_dependency 'lib/highlight_js/highlight_js'
+    require 'highlight_js/highlight_js'
 
     # we skip it cause we configure it in the initializer
     # the railtie for message_bus would insert it in the
@@ -107,20 +100,34 @@ module Discourse
     # issue is image_optim crashes on missing dependencies
     config.assets.image_optim = false
 
-    config.autoloader = :zeitwerk
+    require 'discourse_inflector'
+    Rails.autoloaders.each do |autoloader|
+      autoloader.inflector = DiscourseInflector.new
+      autoloader.inflector.inflect(
+        'canonical_url' => 'CanonicalURL',
+        'clean_up_unmatched_ips' => 'CleanUpUnmatchedIPs',
+        'homepage_constraint' => 'HomePageConstraint',
+        'ip_addr' => 'IPAddr',
+        'onpdiff' => 'ONPDiff',
+        'onceoff' => 'Jobs',
+        'pop3_polling_enabled_setting_validator' => 'POP3PollingEnabledSettingValidator',
+        'regular' => 'Jobs',
+        'scheduled' => 'Jobs',
+        'version' => 'Discourse',
+        'csrf_token_verifier' => 'CSRFTokenVerifier',
+      )
+    end
+    Rails.autoloaders.main.ignore("app/models/reports")
+    Rails.autoloaders.once.ignore("lib/freedom_patches",
+                                  "lib/discourse_cookie_store.rb")
 
     # Custom directories with classes and modules you want to be autoloadable.
-    config.autoload_paths += Dir["#{config.root}/app"]
-    config.autoload_paths += Dir["#{config.root}/app/jobs"]
-    config.autoload_paths += Dir["#{config.root}/app/serializers"]
-    config.autoload_paths += Dir["#{config.root}/lib"]
-    config.autoload_paths += Dir["#{config.root}/lib/common_passwords"]
-    config.autoload_paths += Dir["#{config.root}/lib/highlight_js"]
-    config.autoload_paths += Dir["#{config.root}/lib/i18n"]
-    config.autoload_paths += Dir["#{config.root}/lib/validators/"]
-
-    Rails.autoloaders.main.ignore(Dir["#{config.root}/app/models/reports"])
-    Rails.autoloaders.main.ignore(Dir["#{config.root}/lib/freedom_patches"])
+    config.autoload_once_paths << "#{root}/lib"
+    config.autoload_once_paths << "#{root}/lib/common_passwords"
+    config.autoload_once_paths << "#{root}/lib/highlight_js"
+    config.autoload_once_paths << "#{root}/lib/i18n"
+    config.autoload_once_paths << "#{root}/lib/validators"
+    config.autoload_once_paths << "#{root}/lib/svg_sprite"
 
     def watchable_args
       files, dirs = super
@@ -328,30 +335,7 @@ module Discourse
     fonts_path = File.join(config.root, 'public/fonts')
     Discourse::Utils.atomic_ln_s(DiscourseFonts.path_for_fonts, fonts_path)
 
-    require_dependency 'stylesheet/manager'
-    require_dependency 'svg_sprite/svg_sprite'
-
     config.after_initialize do
-      # require common dependencies that are often required by plugins
-      # in the past observers would load them as side-effects
-      # correct behavior is for plugins to require stuff they need,
-      # however it would be a risky and breaking change not to require here
-      require_dependency 'category'
-      require_dependency 'post'
-      require_dependency 'topic'
-      require_dependency 'user'
-      require_dependency 'post_action'
-      require_dependency 'post_revision'
-      require_dependency 'notification'
-      require_dependency 'topic_user'
-      require_dependency 'topic_view'
-      require_dependency 'topic_list'
-      require_dependency 'group'
-      require_dependency 'user_field'
-      require_dependency 'post_action_type'
-      # Ensure that Discourse event triggers for web hooks are loaded
-      require_dependency 'web_hook'
-
       # Load plugins
       plugin_initialization_guard do
         Discourse.plugins.each(&:notify_after_initialize)
